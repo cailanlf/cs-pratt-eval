@@ -29,7 +29,8 @@ record class BinaryOpExpr : Expr
         Subtract,
         Divide,
         Multiply,
-        Exponent
+        Exponent,
+        Assign
     }
 }
 
@@ -41,4 +42,16 @@ record class ParenExpr : Expr
 record class NumberExpr : Expr
 {
     public required BigInteger Value;
+}
+
+record class IfElseExpr : Expr
+{
+    public required Expr Condition { get; init; }
+    public required Expr Then { get; init; }
+    public required Expr Else { get; init; }
+}
+
+record class IdentifierExpr : Expr
+{
+    public required string Identifier { get; init; }
 }

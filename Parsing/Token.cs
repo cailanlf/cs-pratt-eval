@@ -24,4 +24,11 @@ enum TokenType
     Bang,
     Comma,
     Number,
+    Equals,
+    Identifier,
+    KwIf,
+    KwElse,
+    KwThen,
+    KwEnd,
+    Walrus,
 }

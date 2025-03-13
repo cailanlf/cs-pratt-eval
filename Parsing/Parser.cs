@@ -89,6 +89,7 @@ class Parser
                     TokenType.Asterisk => BinaryOpExpr.Operator.Multiply,
                     TokenType.Slash => BinaryOpExpr.Operator.Divide,
                     TokenType.Caret => BinaryOpExpr.Operator.Exponent,
+                    TokenType.Walrus => BinaryOpExpr.Operator.Assign,
                     _ => throw new Exception($"Invalid binary operator {op.Type}"),
                 },
                 Right = right,
@@ -101,8 +102,16 @@ class Parser
     Expr ParseAtomicExpr()
     {
         switch (Peek()) {
+            case { Type: TokenType.Identifier }:
+                var identifier = Consume();
+                return new IdentifierExpr
+                {
+                    Identifier = identifier.Content!
+                };
+
             case { Type: TokenType.Number }:
                 return EmitNumber();
+
             case { Type: TokenType.LParen }:
                 var left = Consume();
                 var expr = ParseExpr();
@@ -115,6 +124,38 @@ class Parser
                 return new ParenExpr {
                     Expr = expr
                 };
+
+            case { Type: TokenType.KwIf }:
+                var kwIf = Consume();
+                var condition = ParseExpr();
+
+                var kwThen = Consume();
+                if (kwThen.Type is not TokenType.KwThen)
+                {
+                    throw new Exception($"expected 'then', got {kwThen.Type}");
+                }
+                var thenExpr = ParseExpr();
+
+                var kwElse = Consume();
+                if (kwElse.Type is not TokenType.KwElse)
+                {
+                    throw new Exception($"expected 'else', got {kwElse.Type}");
+                }
+                var elseExpr = ParseExpr();
+
+                var kwEnd = Consume();
+                if (kwEnd.Type is not TokenType.KwEnd)
+                {
+                    throw new Exception($"expected 'end', got {kwEnd.Type}");
+                }
+
+                return new IfElseExpr
+                {
+                    Condition = condition,
+                    Then = thenExpr,
+                    Else = elseExpr,
+                };
+
             default:
                 throw new Exception($"Expected an atomic expression, but got {Peek()?.Type}");
         }
@@ -149,11 +190,12 @@ class Parser
 
 static class Precedence
 {
-    public static int Level_Addition =        0;
-    public static int Level_Multiplication =  1;
-    public static int Level_Negate =          2;
-    public static int Level_Exponent =        3;
-    public static int Level_Factorial =       4;
+    public static int Level_Assignment =      0;
+    public static int Level_Addition =        1;
+    public static int Level_Multiplication =  2;
+    public static int Level_Negate =          3;
+    public static int Level_Exponent =        4;
+    public static int Level_Factorial =       5;
 
     public static (int, int) LeftAssociative(int level)
         => ((level + 1) * 2 - 1, (level + 1) * 2);
@@ -189,6 +231,8 @@ static class Precedence
                 => LeftAssociative(Level_Multiplication),
             TokenType.Caret
                 => RightAssociative(Level_Exponent),
+            TokenType.Walrus
+                => RightAssociative(Level_Assignment),
             _ => (0, 0),
         };
 }
